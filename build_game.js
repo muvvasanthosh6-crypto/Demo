@@ -1,21 +1,19 @@
 const fs = require('fs');
 const path = require('path');
 
-// Read the clean transparent PNG cutout base64
-const runnerB64 = fs.readFileSync(path.join(__dirname, 'bhai_runner_b64.txt'), 'utf8').trim();
-// Read the obstacle images base64 JSON
-const obstaclesB64 = fs.readFileSync(path.join(__dirname, 'obstacles_b64.json'), 'utf8').trim();
-// Read the flying obstacle images base64 JSON
-const flyingObstaclesB64 = fs.readFileSync(path.join(__dirname, 'flying_obstacles_b64.json'), 'utf8').trim();
-// Read the victory laughing image base64
-const winB64 = fs.readFileSync(path.join(__dirname, 'bhai_win_b64.txt'), 'utf8').trim();
-// Read the 8 level audio files base64 JSON
-const levelAudiosB64 = fs.readFileSync(path.join(__dirname, 'level_audios_b64.json'), 'utf8').trim();
-// Read the bhai out audio base64
-const bhaiOutB64 = fs.readFileSync(path.join(__dirname, 'bhai_out_b64.txt'), 'utf8').trim();
-// Read the boss out photo and audio base64
-const bossOutB64 = fs.readFileSync(path.join(__dirname, 'boss_out_b64.txt'), 'utf8').trim();
-const bossAudioB64 = fs.readFileSync(path.join(__dirname, 'boss_audio_b64.txt'), 'utf8').trim();
+const toDataUri = (relPath, mime) => 'data:' + mime + ';base64,' + fs.readFileSync(path.join(__dirname, relPath)).toString('base64');
+
+const runnerB64 = fs.readFileSync(path.join(__dirname, 'bhai_runner_cutout.png')).toString('base64');
+const obstaclesB64 = JSON.stringify(Array.from({ length: 8 }, (_, i) => toDataUri(`obstacles/obs_${i + 1}.jpg`, 'image/jpeg')));
+const flyingObstaclesB64 = JSON.stringify(Array.from({ length: 4 }, (_, i) => toDataUri(`obstacles/fly_${i + 1}.jpg`, 'image/jpeg')));
+const winB64 = toDataUri('bhai_win.jpg', 'image/jpeg');
+const levelAudiosB64 = JSON.stringify([
+    'bhai 1.mpeg', 'bhai 2.mpeg', 'bhai 3.mpeg', 'bhai 4.mpeg',
+    'bhai 5 .mpeg', 'bhai 6.mpeg', 'bhai 7.mpeg', 'bhai 8.mpeg'
+].map(f => toDataUri(f, 'audio/mpeg')));
+const bhaiOutB64 = toDataUri('bhai out.mpeg', 'audio/mpeg');
+const bossOutB64 = toDataUri('boss_out.jpg', 'image/jpeg');
+const bossAudioB64 = toDataUri('boss.mpeg', 'audio/mpeg');
 
 const html = `<!DOCTYPE html>
 <html lang="en">
@@ -93,11 +91,57 @@ const html = `<!DOCTYPE html>
             flex-direction: column;
             align-items: center;
         }
+        /* Top Distance Bar (Outside Canvas - Never covers character) */
+        .distance-bar {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            background: #161926;
+            padding: 8px 16px;
+            border-radius: 12px 12px 0 0;
+            border: 2px solid #282e3e;
+            border-bottom: none;
+            font-size: 13px;
+            flex-wrap: wrap;
+        }
+        .distance-level {
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: #ffa502;
+            white-space: nowrap;
+        }
+        .distance-track {
+            flex: 1;
+            min-width: 100px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .distance-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #ff9f43, #ee5253);
+            border-radius: 6px;
+            transition: width 0.2s linear;
+            box-shadow: 0 0 10px rgba(238, 82, 83, 0.8);
+        }
+        .distance-text {
+            font-size: 12px;
+            color: #dfe4ea;
+            font-weight: 700;
+            white-space: nowrap;
+        }
         #game-container {
             position: relative;
             width: 100%;
             background: #10121b;
-            border-radius: 16px;
+            border-radius: 0 0 16px 16px;
             overflow: hidden;
             box-shadow: 0 16px 50px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.08);
             border: 2px solid #282e3e;
@@ -109,56 +153,6 @@ const html = `<!DOCTYPE html>
             height: auto;
             background: transparent;
             cursor: pointer;
-        }
-        /* Top Level Progress Bar */
-        .level-progress-bar {
-            position: absolute;
-            top: 14px;
-            left: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            background: rgba(15, 18, 28, 0.88);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            padding: 9px 18px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            box-shadow: 0 4px 18px rgba(0,0,0,0.4);
-            z-index: 10;
-        }
-        .level-title {
-            font-size: 12px;
-            font-weight: 800;
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-            color: #ffa502;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .progress-track {
-            width: 240px;
-            height: 9px;
-            background: rgba(255, 255, 255, 0.12);
-            border-radius: 6px;
-            overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .progress-fill {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, #ff9f43, #ee5253);
-            border-radius: 6px;
-            transition: width 0.25s linear;
-            box-shadow: 0 0 10px rgba(238, 82, 83, 0.8);
-        }
-        .progress-text {
-            font-size: 11px;
-            color: #dfe4ea;
-            font-weight: 600;
-            display: flex;
-            justify-content: space-between;
         }
         .controls-info {
             display: flex;
@@ -244,15 +238,6 @@ const html = `<!DOCTYPE html>
             .mobile-controls {
                 display: flex;
             }
-            .level-progress-bar {
-                top: 8px;
-                left: 8px;
-                padding: 6px 12px;
-            }
-            .progress-track {
-                width: 140px;
-                height: 7px;
-            }
         }
         .touch-btn {
             flex: 1;
@@ -280,15 +265,14 @@ const html = `<!DOCTYPE html>
     </div>
 
     <div id="game-wrapper">
-        <div id="game-container">
-            <div class="level-progress-bar">
-                <div class="level-title" id="hud-level-title">LEVEL 1 &bull; DESERT SUNRISE</div>
-                <div class="progress-track">
-                    <div class="progress-fill" id="hud-progress-fill"></div>
-                </div>
-                <div class="progress-text" id="hud-progress-text">0m / 600m (0%)</div>
+        <div class="distance-bar">
+            <div class="distance-level" id="hud-level-title">LEVEL 1 &bull; DESERT SUNRISE</div>
+            <div class="distance-track">
+                <div class="distance-fill" id="hud-progress-fill"></div>
             </div>
-
+            <div class="distance-text" id="hud-progress-text">0m / 500m (0%)</div>
+        </div>
+        <div id="game-container">
             <canvas id="gameCanvas" width="1360" height="500"></canvas>
         </div>
 
@@ -1526,27 +1510,31 @@ const html = `<!DOCTYPE html>
                 return;
             }
 
-            // Update Progress Bar
-            const hudTitle = document.getElementById('hud-level-title');
-            const hudFill = document.getElementById('hud-progress-fill');
-            const hudText = document.getElementById('hud-progress-text');
-
-            hudTitle.innerHTML = 'LEVEL ' + currentLevel.level + ' &bull; ' + currentLevel.name.toUpperCase();
-
-            if (currentLevel.goalDistance !== Infinity) {
-                const pct = Math.min(100, Math.floor((score / currentGoal) * 100));
-                hudFill.style.width = pct + '%';
-                hudText.textContent = score + 'm / ' + currentGoal + 'm (' + pct + '%)  •  TOTAL: ' + totalScore + 'm';
-            } else {
-                hudFill.style.width = '100%';
-                hudText.textContent = score + 'm (ENDLESS MASTER)  •  TOTAL: ' + totalScore + 'm';
-            }
+            // Update Top Distance Bar
+            updateDistanceBar();
 
             // Milestone Beep every 100m within the level
             if (score > 0 && score % 100 === 0 && score !== lastMilestone) {
                 lastMilestone = score;
                 milestoneFlashTimer = 35;
                 playMilestoneSound();
+            }
+        }
+
+        function updateDistanceBar() {
+            const hudTitle = document.getElementById('hud-level-title');
+            const hudFill = document.getElementById('hud-progress-fill');
+            const hudText = document.getElementById('hud-progress-text');
+            if (!hudTitle || !hudFill || !hudText) return;
+
+            hudTitle.innerHTML = 'LEVEL ' + currentLevel.level + ' &bull; ' + currentLevel.name.toUpperCase();
+            if (currentLevel.goalDistance !== Infinity) {
+                const pct = Math.min(100, Math.floor((score / currentLevel.goalDistance) * 100));
+                hudFill.style.width = pct + '%';
+                hudText.textContent = score + 'm / ' + currentLevel.goalDistance + 'm (' + pct + '%) • TOTAL: ' + totalScore + 'm';
+            } else {
+                hudFill.style.width = '100%';
+                hudText.textContent = score + 'm (ENDLESS) • TOTAL: ' + totalScore + 'm';
             }
         }
 
@@ -1769,6 +1757,7 @@ const html = `<!DOCTYPE html>
             levelUpBannerText = '🎉 LEVEL ' + currentLevel.level + ': ' + currentLevel.name.toUpperCase() + ' — GO!';
             gameState = 'PLAYING';
             document.getElementById('speed-meter').textContent = 'SPEED: ' + gameSpeed.toFixed(1) + 'x';
+            updateDistanceBar();
             playJumpSound();
             playLevelAudio(currentLevelIdx, true);
         }
@@ -1926,6 +1915,7 @@ const html = `<!DOCTYPE html>
             bhai.isGrounded = true;
             bhai.isDucking = false;
             document.getElementById('speed-meter').textContent = 'SPEED: ' + gameSpeed.toFixed(1) + 'x';
+            updateDistanceBar();
             playJumpSound();
             playLevelAudio(currentLevelIdx, true);
         }
